@@ -1,0 +1,173 @@
+```{r}
+library(tidyverse)
+library(ggplot2)
+```
+
+###  Q1
+Write a function that returns the sample space for the experiment consisting of samplign a 4 digit PIN
+  * Call your function get_all_perms
+
+  * Essentially, your function does not take any arguments but returns the sample space consisting of all the four digit numbers
+   
+  * The function `expand.grid` expand.grid creates a data frame from all combinations of the supplied vectors or factors. For example:
+ 
+  ```expand.grid(0:1, 0:1, 0:1)```
+
+* generates  
+
+![](https://www.dropbox.com/s/cnlt4fg8rxd01d6/expand.grid.png?dl=1)
+ 
+
+* Strategy, use `expand.grid` to generate the permutation for four verctation in the range 0:9
+  * Return the number of rows in that `data.frame`
+
+  
+
+```{r}
+
+get_all_perms <- function(x=0:9) {
+  output <- expand.grid(0:9, 0:9, 0:9, 0:9)
+  print(output)
+  nrow(output)
+  
+}
+
+```
+
+```{r}
+# Running this should return 10,000
+get_all_perms()
+```
+
+###  Q2
+
+The function above is not very useful since it always computes the same thing, namely the number of possible permutation of digits. One way to make it more useful is by passing as an argument the number of digits to consider, i.e., the number of columns in `expand.grid`. Let;s call that param `size`, which by default should be `4`. For exmaple:
+
+*  `get_all_perms(size = 1 )` will return all the number of size 1 (0-9)
+*  `get_all_perms(size = 3 )` will return all the permutations of size 3 (000 - to 999)
+
+
+* Hint: `expand.grid` requires the number of input parameters to match the permutation length. We need to automate that so that the number of vectors passed as input matches the `size` values passed into `get_all_perms`
+  * We can do that using `replicate`
+  * `replicate(2, c(1,2,3), simplify=FALSE)` will repeat the vector `c(1,2,3)` twice
+    * We need to pass `replicate` the value `simplify=FALSE` so that it does not convert the output for us into a matrix
+  * Use pipe (`%>%`) pass the output of `replicate` into expand.grid
+  * Make sure replicated generate the correct input for exand.grid
+```{r}
+get_all_perms <- function(size=4) {
+  output <- expand.grid(replicate(size, c(0:9), simplify=FALSE))
+  print(output)
+  nrow(output)
+  
+}
+get_all_perms(2)
+get_all_perms(3)
+
+```
+
+###  Q3
+
+* Given a fish disease that occurs with a probability of p= 0.43
+* You sampled 340 animals
+* How many of these animals should you expect to see the disease in?
+* Hint: you will need to compute the probability of each element of the sample space and find the value that has the highest probability
+
+```{r}
+b <- c("healthy", "diseased")
+samplefish <- sample(c("healthy", "diseased"), size = 340, replace = TRUE, 
+             prob = c(0.57, 0.43))
+
+
+healthycount <- sum(samplefish == "healthy")
+probhealthy <- healthycount/340
+
+diseasedcount <- sum(samplefish == "diseased")
+probdiseased <- diseasedcount/340
+#The diseased animals should be about 199
+
+```
+
+### Q4
+Plot the two following distributions:
+
+$$
+x \sim \mathcal{N}(10, 0.5) \\
+y \sim \mathcal{N}(10.2, 0.5) \\
+$$
+
+
+```{r}
+
+set.seed(42)
+
+x_vals <- seq(8,12,0.01)
+
+x_sample = dnorm(x_vals, 10, 0.5)
+y_sample = dnorm(x_vals, 10.2, 0.5)
+
+
+
+
+gg <- ggplot() +
+  geom_line(aes(x_vals, x_sample), color="red", size=2) +
+  geom_line(aes(x_vals, y_sample), color="blue", size=2) +  
+ labs(x = "x_vals", y="probs_1")
+
+gg + scale_color_manual(name="colour", 
+                        labels = c("N(1, 2.3)", 
+                                   "N(0,1)"), 
+                        values = c("N(1, 2.3)"="blue", 
+                                   "N(0,1)"="red"))
+
+```
+
+* Your plot should look like the following
+![](https://www.dropbox.com/s/psrjtl6abjla7z5/sample_gaussian_plot.png?dl=1)
+
+
+* Draw 40 values from the first distribution and store them in a variable called `x_sample`
+* Draw 40 values from the second distribution and store them in a variable called `y_sample`
+  * make sure you run the following line before you sample data
+  ```set.seed(42)```
+ 
+* Do a `t-`test to compute the `x_sample` and `y_sample`
+  * A `t-`test compares two vectors of values and predicts if the two vectors are from the same distribution
+  * The format for the t-test in R is
+ 
+ `t.test(x,y)` where `x` an `y` are the vectors of values we would like to compare.
+  * Look at the `p-value`, if it's smaller than say 0.05, then there is a statistically significant difference between the two datasets.
+
+* Do you agree with the conclusion of the `t-test`. In other words, would you be comfortable reporting in a publication that the data in `x_sample` and `y_sample` are statistically different?
+
+```{r}
+ttest <- t.test(x_sample,y_sample)
+#The data in the two sets are statistaclly different with a p-value of .999
+```
+
+### Q5
+
+* We have used the function `dnorm` to plot the bell-shaped curve for a distribution $ x \sim \mathcal{N}(10, 0.5)$
+  * Use seq(8, 12, 0.1) to generate the x-axis values
+  * The pdf should look like the following
+
+![](https://www.dropbox.com/s/jl2c2atpkxze7ev/sample_pdf_sum_question.png?dl=1)
+
+* Use `dnorm` to compute the probability density for each point along the $x-$axis generated using `seq()` above
+  * What do you notice? Hint, sum the values obtained
+  
+
+```{r}
+set.seed(43)
+
+x_vals <- seq(8, 12, 0.1)
+probs <- dnorm(x_vals, mean = 10, sd = 0.5, log = FALSE)
+sum(probs)
+#The sum of the probabilities is similar to the mean. The distribution of the probabilities is also a bell shaped curve. 
+
+#plot
+ggplot() +
+  geom_line(aes(x_vals, probs), color="black", size=0.5) +
+ labs(x = "x_vals", y="probs_1")
+
+```
+
