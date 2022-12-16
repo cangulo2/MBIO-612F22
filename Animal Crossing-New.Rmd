@@ -1,0 +1,369 @@
+---
+title: "Animal Crossing Tidy Data and Visualizations"
+output: html_document
+date: "2022-12-13"
+---
+
+
+# Tidying and Cleaning Data from Animal Crossing: New Horizons Dataset with Data Visualization
+
+I used this Animal Crossing dataset from the tidytuesday repository found here: https://github.com/rfordatascience/tidytuesday/blob/master/data/2020/2020-05-05/readme.md
+
+The dataset was already relatively tidy and clean, so I untidied and dirtied the data set. I then did six data visualizations of the villagers, critic, and user reviews data frames.
+
+#### Loading the Libraries used
+```{r}
+
+library(ggplot2)
+library(stringr)
+library(dplyr)
+library(tidyverse)
+library(tidytext)
+library(lubridate)
+library(ggwordcloud)
+library(treemapify)
+```
+
+
+
+#### Loading the Data
+##### Install via devtools::install_github("thebioengineer/tidytuesdayR")
+##### devtools::install_github("thebioengineer/tidytuesdayR")
+```{r}
+
+
+tuesdata <- tidytuesdayR::tt_load('2020-05-05')
+tuesdata <- tidytuesdayR::tt_load(2020, week = 19)
+```
+
+
+#### Creating tables for villagers, items, critic reviews, and user reviews
+```{r}
+
+critic <- tuesdata$critic
+villagers <- tuesdata$villagers
+items <- tuesdata$items
+user_reviews <- tuesdata$user_reviews
+```
+
+
+
+
+
+## Untidying and Messying data
+#### Joining the villager gender and species columns and renaming as animal
+```{r}
+villagers$animal <- paste(villagers$gender, "-", villagers$species)
+villagers <- villagers[, c("row_n", "id", "name","animal", "birthday", "personality", "song", "phrase", "full_id", "url")]
+```
+
+#### Creating duplicates of random rows in items
+```{r}
+items <- items[rep(seq_len(nrow(items)), each = 3), ]
+```
+
+#### Creating empty column
+```{r}
+critic <- critic %>% add_column(new_col = NA)
+colnames(critic)[5] = "empty"
+```
+
+#### Creating mispellings of nooks cranny
+```{r}
+items$sources<-replace(items$sources, items$sources=="Nook's Cranny", "Nock's Cranny")
+```
+
+#### Renaming column title as variable
+```{r}
+colnames(items)[11] = "TRUE/FALSE"
+```
+
+### Tidying/Cleaning the Items Data Frame
+
+#### Tidying column names for clarification
+```{r}
+colnames(items)[colnames(items) == 'num_id'] <- 'Numerical ID'
+colnames(items)[colnames(items) == 'recipe'] <- 'Recipe Number'
+colnames(items)[colnames(items) == 'image_url'] <- 'Item Image Link'
+colnames(items)[colnames(items) == 'name'] <- 'Name'
+colnames(items)[colnames(items) == 'category'] <- 'Category'
+colnames(items)[colnames(items) == 'sell_value'] <- 'Sell Price'
+colnames(items)[colnames(items) == 'orderable'] <- 'Orderable'
+colnames(items)[colnames(items) == 'sources'] <- 'Source'
+colnames(items)[colnames(items) == 'customizable'] <- 'Customizable'
+colnames(items)[colnames(items) == 'recipe_id'] <- 'Recipe ID'
+colnames(items)[colnames(items) == 'games_id'] <- 'Games ID'
+colnames(items)[colnames(items) == 'id_full'] <- 'Full ID Name'
+```
+
+#### Renaming incorrect column names
+```{r}
+colnames(items)[7] = "Sell Currency"
+colnames(items)[8] = "Buy Price"
+colnames(items)[9] = "Buy Currency"
+colnames(items)[11] = "Customizable"
+```
+
+#### Removing "item-" from id column
+```{r}
+items$`Full ID Name`<-gsub("item-","",as.character(items$`Full ID Name`))
+```
+
+#### Correcting Nook's Cranny mispelling
+```{r}
+items$Source<-replace(items$Source, items$Source=="Nock's Cranny", "Nook's Cranny")
+```
+
+### Cleaning items data frame 
+#### Removed the id column because it's repetitive, we already have the full id column
+```{r}
+items <- subset(items, select = -c(id))
+```
+
+#### Remove duplicated rows
+```{r}
+items <- items[!duplicated(items),]
+```
+
+#### Reordering the rows for clarity
+```{r}
+items <- items[, c("Numerical ID", "Full ID Name", "Name","Category", "Buy Price", "Buy Currency", "Sell Price", "Sell Currency","Source", "Recipe Number", "Recipe ID", "Orderable", "Customizable","Games ID", "Item Image Link")]
+```
+
+### Tidying/Cleaning the Villagers Data Frame
+#### Tidying column names
+```{r}
+colnames(villagers)[colnames(villagers) == 'row_n'] <- 'Numerical ID'
+colnames(villagers)[colnames(villagers) == 'phrase'] <- 'Phrase'
+colnames(villagers)[colnames(villagers) == 'url'] <- 'Item Image Link'
+colnames(villagers)[colnames(villagers) == 'category'] <- 'Category'
+colnames(villagers)[colnames(villagers) == 'birthday'] <- 'Birthday'
+colnames(villagers)[colnames(villagers) == 'personality'] <- 'Personality'
+colnames(villagers)[colnames(villagers) == 'song'] <- 'Song'
+colnames(villagers)[colnames(villagers) == 'name'] <- 'Name'
+colnames(villagers)[colnames(villagers) == 'full_id'] <- 'Full ID Name'
+```
+
+#### Separating the villagers gender-species column into two separate columns, splitting up variables
+```{r}
+villagers[c('Gender', 'Species')] <- str_split_fixed(villagers$animal, '-', 2)
+```
+
+#### Deleting now repetitive animal column 
+```{r}
+villagers <- subset(villagers, select = -c(animal))
+```
+
+#### Removed the id column because it's repetitive, we already have the full id column
+```{r}
+villagers <- subset(villagers, select = -c(id))
+```
+
+#### Reordering the rows for clarity
+```{r}
+villagers <- villagers[, c("Numerical ID", "Full ID Name", "Name","Gender", "Species", "Birthday", "Personality", "Phrase","Song","Item Image Link")]
+```
+
+#### Removing "villager-" from id column
+```{r}
+villagers$`Full ID Name`<-gsub("villager-","",as.character(villagers$`Full ID Name`))
+```
+
+
+### Tidying/Cleaning Critic Data Frame
+#### Deleting empty column
+```{r}
+critic <- subset(critic, select = -c(empty))
+```
+
+#### Reordering rows
+```{r}
+critic <- critic[, c("grade", "publication", "date","text")]
+```
+
+#### Renaming Rows
+```{r}
+colnames(critic)[colnames(critic) == 'grade'] <- 'Grade'
+colnames(critic)[colnames(critic) == 'publication'] <- 'Publication'
+colnames(critic)[colnames(critic) == 'date'] <- 'Date'
+colnames(critic)[colnames(critic) == 'text'] <- 'Text'
+```
+### Tidying/Cleaning User Reviews Data Frame
+#### Renaming Rows
+```{r}
+colnames(user_reviews)[colnames(user_reviews) == 'grade'] <- 'Grade'
+colnames(user_reviews)[colnames(user_reviews) == 'user_name'] <- 'Username'
+colnames(user_reviews)[colnames(user_reviews) == 'date'] <- 'Date'
+colnames(user_reviews)[colnames(user_reviews) == 'text'] <- 'Text'
+```
+
+#### Reordering rows
+```{r}
+user_reviews <- user_reviews[, c("Grade", "Username", "Date","Text")]
+```
+
+## Data Visualizations
+#### User Reviews
+##### Users either really disliked the game or liked it.
+```{r}
+
+ggplot(user_reviews, aes(x=Grade)) + 
+  geom_histogram(color="black", fill="black") +
+  labs(title="User Reviews",x="Grade Score (10)", y = "Count")
+
+
+```
+
+### Critic Reviews
+
+#### Using ggplot to look at critic reviews
+```{r}
+ggplot(critic, aes(x=Grade)) + 
+  geom_histogram(color="black", fill="black") +
+  labs(title="Critic Reviews",x="Grade Score (100)", y = "Count")
+```
+
+### Using the Tidy Text Package to look at User Reviews
+#### install.packages("tidytext")
+
+
+#### Separating words from the text column
+```{r}
+user_reviews %>%
+    unnest_tokens(word, Text)
+```
+
+#### Filtering reviews by the week of the review
+```{r}
+user_reviews %>% 
+  group_by(week = floor_date(Date, "week")) %>%
+  summarize(nb_reviews = n(), 
+            avg_grade = mean(Grade))
+```
+
+#### Creating user review words of key words, excluding common words like the, mine, etc. 
+```{r}
+user_reviews_words <- user_reviews %>%
+  unnest_tokens(word, Text) %>% 
+  anti_join(stop_words, by= "word") %>%
+  count(Username, Date, Grade, word)
+```
+
+#### Plotting Words Associated with Review Scores
+ ##### Words such as greedy and ridiculous appeared with more negative reviews as opposed to words like graphics, hours, cute, and fun appeared with the more positive reviews, or higher scores. 
+```{r}
+user_reviews_words %>% 
+   group_by(word) %>%
+   summarize(avg_grade = mean(Grade), 
+             nb_reviews = n()) %>%
+   arrange(desc(nb_reviews)) %>%
+   filter(nb_reviews >= 80) %>%
+   arrange(desc(avg_grade)) %>%
+   ggplot(aes(nb_reviews, avg_grade)) +
+   geom_point(color="blue") +
+   geom_text(aes(label =  word), vjust = 1, hjust = 1, check_overlap = TRUE) +
+   scale_x_log10() + 
+   ggtitle("Words Associated with Review Scores") +
+  xlab("Word Appearance") + ylab("Review Score")
+ 
+
+```
+
+#### Plotting Words Associated with Really Negative Review Scores
+##### Creating a plot of the fifteen words most associated with the lowest review scores. It has to appear in at least 80 reviews. There's words associated with the purchase of the game like greedy, money, bought, and for some reason girlfriend. 
+```{r}
+
+
+ by_word <- user_reviews_words %>% 
+   group_by(word) %>%
+   summarize(avg_grade = mean(Grade), 
+             nb_reviews = n()) %>%
+   arrange(desc(nb_reviews)) %>%
+   filter(nb_reviews >= 80) %>%
+  arrange(desc(avg_grade)) 
+    
+  
+  by_word %>% 
+    top_n(15, -avg_grade) %>% 
+    ggplot(aes(nb_reviews, avg_grade)) +
+   geom_point() +
+   geom_text(aes(label =  word), vjust = 1, hjust = 1, check_overlap = TRUE) +
+   scale_x_log10() + 
+   ggtitle("15 Words Associated with Low Review Scores") +
+  xlab("Word Appearance") + ylab("Review Score")
+  
+   
+```
+#### install.packages("ggwordcloud")
+##### 20 most common words associated with positive review scores. I couldn't figure out how to exclude the word bombing, which is associated with the phrase, "review bombing", not animal crossing which is a wholesome game. 
+```{r}
+
+
+ 
+by_word %>% 
+    top_n(20, avg_grade) %>% 
+ ggplot(aes(label = word, size = nb_reviews, color = word)) +
+  geom_text_wordcloud(area_corr = TRUE) +
+  scale_size_area(max_size = 15) +
+  theme_minimal() + 
+   ggtitle("20 Words Associated with Positive Review Scores") 
+
+
+```
+
+```{r}
+
+```
+
+### Using the Treemapify Package to make a treemap of the species types of the villagers. There's quite a few species types in New Horizons and some of them are new. 
+
+#### install.packages("treemapify")
+```{r}
+
+
+treemap <- villagers %>%
+  count(Species)
+
+ggplot(treemap, 
+       aes(fill = Species, 
+           area = n, 
+           label = Species)) +
+  geom_treemap() + 
+  geom_treemap_text(colour = "white", 
+                    place = "centre") +
+  labs(title = "Villager Species")
+```
+
+```{r}
+
+```
+
+### Creating a pie chart of the different personalities of the villagers. The personalities seem pretty well divided among the villagers. 
+```{r}
+
+
+
+personalities <- villagers %>%
+    count(Personality) %>%
+    arrange(desc(Personality)) %>%
+    mutate(prop = round(n * 100 / sum(n), 1),
+           lab.ypos = cumsum(prop) - 0.5  *prop)
+  
+
+
+  ggplot(personalities, 
+         aes(x = "", 
+             y = prop, 
+             fill = Personality)) +
+    geom_bar(width = 1, 
+             stat = "identity", 
+             color = "black") +
+  geom_text(aes(y = lab.ypos, label = Personality), 
+            color = "black") +
+    coord_polar("y", 
+                start = 0, 
+                direction = -1) +
+    theme_void()+
+  labs(title = "Personalities of the Villagers")
+```
+
